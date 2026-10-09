@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ระบบบันทึกรายรับ-รายจ่าย (Expense Tracker)</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome CDN -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap");
+      body {
+        font-family: "Kanit", sans-serif;
+        background-color: #99ffff; /* Custom Aqua Background */
+      }
+    </style>
+  </head>
+  <body class="text-slate-800 min-h-screen">
+    <!-- Header / Navbar -->
+    <header class="bg-indigo-700 text-white shadow-md">
+      <div
+        class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center"
+      >
+        <h1 class="text-xl md:text-2xl font-bold flex items-center gap-2">
+          <i class="fa-solid fa-wallet"></i> ระบบบันทึกรายรับ-รายจ่าย
+        </h1>
+        <button
+          onclick="fetchData()"
+          class="bg-indigo-800 hover:bg-indigo-900 text-white px-3 py-1.5 rounded-lg text-sm transition flex items-center gap-1 shadow-sm"
+        >
+          <i class="fa-solid fa-rotate-right" id="refresh-icon"></i> รีเฟรช
+        </button>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div
+          class="bg-white/95 backdrop-blur-sm p-5 rounded-xl shadow-md border border-teal-100 flex items-center justify-between"
+        >
+          <div>
+            <p class="text-xs text-slate-500 font-medium">รายรับทั้งหมด</p>
+            <h2
+              class="text-2xl font-bold text-emerald-600 mt-1"
+              id="total-income"
+            >
+              ฿0.00
+            </h2>
+          </div>
+          <div
+            class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-xl shadow-inner"
+          >
+            <i class="fa-solid fa-arrow-trend-up"></i>
+          </div>
+        </div>
+
+        <div
+          class="bg-white/95 backdrop-blur-sm p-5 rounded-xl shadow-md border border-teal-100 flex items-center justify-between"
+        >
+          <div>
+            <p class="text-xs text-slate-500 font-medium">รายจ่ายทั้งหมด</p>
+            <h2
+              class="text-2xl font-bold text-rose-600 mt-1"
+              id="total-expense"
+            >
+              ฿0.00
+            </h2>
+          </div>
+          <div
+            class="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center text-xl shadow-inner"
+          >
+            <i class="fa-solid fa-arrow-trend-down"></i>
+          </div>
+        </div>
+
+        <div
+          class="bg-white/95 backdrop-blur-sm p-5 rounded-xl shadow-md border border-teal-100 flex items-center justify-between"
+        >
+          <div>
+            <p class="text-xs text-slate-500 font-medium">คงเหลือสุทธิ</p>
+            <h2
+              class="text-2xl font-bold text-indigo-600 mt-1"
+              id="net-balance"
+            >
+              ฿0.00
+            </h2>
+          </div>
+          <div
+            class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-xl shadow-inner"
+          >
+            <i class="fa-solid fa-scale-balanced"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form and Chart Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Transaction Form (5 Cols) -->
+        <div
+          class="lg:col-span-5 bg-white/95 backdrop-blur-sm p-6 rounded-xl shadow-md border border-teal-100"
+        >
+          <h3
+            class="text-lg font-bold mb-4 text-slate-700 flex items-center gap-2"
+          >
+            <i class="fa-solid fa-circle-plus text-indigo-600"></i>
+            บันทึกรายการใหม่
+          </h3>
+          <form
+            id="txn-form"
+            onsubmit="handleFormSubmit(event)"
+            class="space-y-4"
+          >
+            <div>
+              <label class="block text-sm font-medium mb-1 text-slate-600"
+                >ประเภทรายการ</label
+              >
+              <div class="grid grid-cols-2 gap-2">
+                <label
+                  class="cursor-pointer border rounded-lg p-2 text-center flex items-center justify-center gap-2 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-700 font-medium text-sm transition"
+                >
+                  <input
+                    type="radio"
+                    name="type"
+                    value="INCOME"
+                    class="hidden"
+                    onchange="filterCategories()"
+                    checked
+                  />
+                  <i class="fa-solid fa-circle-arrow-up text-emerald-500"></i>
+                  รายรับ
+                </label>
+                <label
+                  class="cursor-pointer border rounded-lg p-2 text-center flex items-center justify-center gap-2 has-[:checked]:bg-rose-50 has-[:checked]:border-rose-500 has-[:checked]:text-rose-700 font-medium text-sm transition"
+                >
+                  <input
+                    type="radio"
+                    name="type"
+                    value="EXPENSE"
+                    class="hidden"
+                    onchange="filterCategories()"
+                  />
+                  <i class="fa-solid fa-circle-arrow-down text-rose-500"></i>
+                  รายจ่าย
+                </label>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-medium mb-1 text-slate-600"
+                  >วันที่</label
+                >
+                <input
+                  type="date"
+                  id="form-date"
+                  required
+                  class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50/50"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1 text-slate-600"
+                  >จำนวนเงิน (บาท)</label
+                >
+                <input
+                  type="number"
+                  id="form-amount"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0.00"
+                  required
+                  class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50/50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1 text-slate-600"
+                >หมวดหมู่</label
+              >
+              <select
+                id="form-category"
+                required
+                class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50/50"
+              >
+                <option value="">-- เลือกหมวดหมู่ --</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1 text-slate-600"
+                >หมายเหตุ</label
+              >
+              <input
+                type="text"
+                id="form-note"
+                placeholder="ระบุเพิ่มเติม (ถ้ามี)"
+                class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50/50"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1 text-slate-600"
+                >แนบสลิป / ใบเสร็จ</label
+              >
+              <input
+                type="file"
+                id="form-file"
+                accept="image/*"
+                class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+              />
+            </div>
+
+            <button
+              type="submit"
+              id="btn-submit"
+              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg text-sm transition shadow-md flex justify-center items-center gap-2"
+            >
+              <span>บันทึกข้อมูล</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Visual Charts Container (7 Cols) -->
+        <div
+          class="lg:col-span-7 bg-white/95 backdrop-blur-sm p-6 rounded-xl shadow-md border border-teal-100 flex flex-col justify-between"
+        >
+          <!-- Chart Controls & Tab Header -->
+          <div
+            class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4"
+          >
+            <h3
+              class="text-lg font-bold text-slate-700 flex items-center gap-2"
+              id="chart-title"
+            >
+              <i class="fa-solid fa-chart-column text-indigo-600"></i>
+              เปรียบเทียบรายรับ VS รายจ่าย
+            </h3>
+            <div
+              class="flex items-center bg-slate-100 p-1 rounded-lg text-xs font-medium self-start sm:self-auto"
+            >
+              <button
+                type="button"
+                onclick="switchChartMode('compare')"
+                id="tab-compare"
+                class="px-3 py-1.5 rounded-md bg-white text-indigo-700 shadow-sm transition"
+              >
+                <i class="fa-solid fa-chart-column mr-1"></i> เปรียบเทียบ
+              </button>
+              <button
+                type="button"
+                onclick="switchChartMode('category')"
+                id="tab-category"
+                class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition"
+              >
+                <i class="fa-solid fa-chart-pie mr-1"></i> สัดส่วนรายจ่าย
+              </button>
+            </div>
+          </div>
+
+          <!-- Responsive Chart Canvas Holder with Balanced Height -->
+          <div
+            class="relative w-full h-[280px] md:h-[320px] flex justify-center items-center"
+          >
+            <canvas id="mainChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transaction History Table -->
+      <div
+        class="bg-white/95 backdrop-blur-sm rounded-xl shadow-md border border-teal-100 overflow-hidden"
+      >
+        <div
+          class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/80"
+        >
+          <h3 class="text-lg font-bold text-slate-700 flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-indigo-600"></i> ประวัติรายการ
+          </h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-600">
+            <thead
+              class="bg-slate-100/80 text-slate-600 text-xs uppercase font-semibold"
+            >
+              <tr>
+                <th class="p-4">วันที่</th>
+                <th class="p-4">ประเภท</th>
+                <th class="p-4">หมวดหมู่</th>
+                <th class="p-4">หมายเหตุ</th>
+                <th class="p-4 text-right">จำนวนเงิน</th>
+                <th class="p-4 text-center">สลิป</th>
+                <th class="p-4 text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="txn-table-body" class="divide-y divide-slate-100">
+              <tr>
+                <td colspan="7" class="text-center py-8 text-slate-400">
+                  กำลังโหลดข้อมูล...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <!-- Global Loading Overlay -->
+    <div
+      id="loading-overlay"
+      class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center"
+    >
+      <div
+        class="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center gap-3"
+      >
+        <i
+          class="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-600"
+        ></i>
+        <p class="text-sm font-medium text-slate-700" id="loading-text">
+          กำลังประมวลผล...
+        </p>
+      </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+      // ⚠️ วาง Web App URL ที่ได้จาก Google Apps Script ที่นี่
+      const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxXVewly1DCnREOInrk6bKHNAjO3H1QzFMUGfiCMD2rLmcJCANSITv_TvKY3jZ_FMoN/exec";
+
+      let state = {
+        categories: [],
+        transactions: [],
+      };
+
+      let currentChartMode = "compare"; // Default mode: 'compare' | 'category'
+      let chartInstance = null;
+
+      // Initialize App
+      document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("form-date").valueAsDate = new Date();
+        fetchData();
+      });
+
+      // Fetch Initial Data
+      async function fetchData() {
+        showLoading(true, "กำลังดึงข้อมูล...");
+        try {
+          const response = await fetch(
+            `${APPS_SCRIPT_URL}?action=getInitialData`,
+          );
+          const result = await response.json();
+
+          if (result.status === "success") {
+            state.categories = result.data.categories;
+            state.transactions = result.data.transactions;
+
+            filterCategories();
+            renderUI();
+          } else {
+            alert("Error: " + result.message);
+          }
+        } catch (err) {
+          alert("ไม่สามารถติดต่อเซิร์ฟเวอร์ได้: " + err.message);
+        } finally {
+          showLoading(false);
+        }
+      }
+
+      // Render All UI Components
+      function renderUI() {
+        renderSummary();
+        renderTable();
+        renderChart();
+      }
+
+      // Switch Chart Mode
+      function switchChartMode(mode) {
+        currentChartMode = mode;
+        const tabCompare = document.getElementById("tab-compare");
+        const tabCategory = document.getElementById("tab-category");
+        const chartTitle = document.getElementById("chart-title");
+
+        if (mode === "compare") {
+          tabCompare.className =
+            "px-3 py-1.5 rounded-md bg-white text-indigo-700 shadow-sm transition";
+          tabCategory.className =
+            "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition";
+          chartTitle.innerHTML = `<i class="fa-solid fa-chart-column text-indigo-600"></i> เปรียบเทียบรายรับ VS รายจ่าย`;
+        } else {
+          tabCategory.className =
+            "px-3 py-1.5 rounded-md bg-white text-indigo-700 shadow-sm transition";
+          tabCompare.className =
+            "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition";
+          chartTitle.innerHTML = `<i class="fa-solid fa-chart-pie text-indigo-600"></i> สัดส่วนรายจ่ายตามหมวดหมู่`;
+        }
+
+        renderChart();
+      }
+
+      // Filter Categories based on Selected Type (Income/Expense)
+      function filterCategories() {
+        const selectedType = document.querySelector(
+          'input[name="type"]:checked',
+        ).value;
+        const categorySelect = document.getElementById("form-category");
+
+        const filtered = state.categories.filter(
+          (c) => c.type === selectedType,
+        );
+
+        categorySelect.innerHTML =
+          '<option value="">-- เลือกหมวดหมู่ --</option>';
+        filtered.forEach((c) => {
+          categorySelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+      }
+
+      // Render Summary Cards
+      function renderSummary() {
+        let income = 0;
+        let expense = 0;
+
+        state.transactions.forEach((t) => {
+          if (t.type === "INCOME") income += t.amount;
+          if (t.type === "EXPENSE") expense += t.amount;
+        });
+
+        document.getElementById("total-income").innerText =
+          `฿${income.toLocaleString("th-TH", { minimumFractionDigits: 2 })}`;
+        document.getElementById("total-expense").innerText =
+          `฿${expense.toLocaleString("th-TH", { minimumFractionDigits: 2 })}`;
+
+        const net = income - expense;
+        const netElem = document.getElementById("net-balance");
+        netElem.innerText = `฿${net.toLocaleString("th-TH", { minimumFractionDigits: 2 })}`;
+        netElem.className = `text-2xl font-bold mt-1 ${net >= 0 ? "text-indigo-600" : "text-rose-600"}`;
+      }
+
+      // Render Table Rows
+      function renderTable() {
+        const tbody = document.getElementById("txn-table-body");
+
+        if (state.transactions.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="7" class="text-center py-8 text-slate-400">ยังไม่มีข้อมูลรายการ</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = state.transactions
+          .map((t) => {
+            const category = state.categories.find(
+              (c) => c.id === t.categoryId,
+            );
+            const categoryName = category ? category.name : "-";
+            const isIncome = t.type === "INCOME";
+
+            return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-4 font-medium">${t.date}</td>
+                        <td class="p-4">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${isIncome ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}">
+                                ${isIncome ? "รายรับ" : "รายจ่าย"}
+                            </span>
+                        </td>
+                        <td class="p-4">${categoryName}</td>
+                        <td class="p-4 text-slate-500">${t.note || "-"}</td>
+                        <td class="p-4 text-right font-bold ${isIncome ? "text-emerald-600" : "text-rose-600"}">
+                            ${isIncome ? "+" : "-"}${t.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                        </td>
+                        <td class="p-4 text-center">
+                            ${t.fileUrl ? `<a href="${t.fileUrl}" target="_blank" class="text-indigo-600 hover:text-indigo-800"><i class="fa-solid fa-image"></i></a>` : "-"}
+                        </td>
+                        <td class="p-4 text-center">
+                            <button onclick="deleteTransaction('${t.id}')" class="text-rose-500 hover:text-rose-700 p-1">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+          })
+          .join("");
+      }
+
+      // Render Charts Dynamic Router
+      function renderChart() {
+        if (currentChartMode === "compare") {
+          renderBarChartCompare();
+        } else {
+          renderDonutChartCategory();
+        }
+      }
+
+      // 📊 1. กราฟแท่งสวยงาม: เปรียบเทียบรายรับ VS รายจ่าย (Bar Chart)
+      function renderBarChartCompare() {
+        const ctx = document.getElementById("mainChart").getContext("2d");
+
+        let totalIncome = 0;
+        let totalExpense = 0;
+
+        state.transactions.forEach((t) => {
+          if (t.type === "INCOME") totalIncome += t.amount;
+          if (t.type === "EXPENSE") totalExpense += t.amount;
+        });
+
+        if (chartInstance) chartInstance.destroy();
+
+        chartInstance = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: ["รายรับรวม", "รายจ่ายรวม"],
+            datasets: [
+              {
+                label: "จำนวนเงิน (บาท)",
+                data: [totalIncome, totalExpense],
+                backgroundColor: [
+                  "#10B981", // สีเขียว Emerald สำหรับรายรับ
+                  "#EF4444", // สีแดง Rose สำหรับรายจ่าย
+                ],
+                borderRadius: 8,
+                barThickness: 50,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return ` ฿${context.raw.toLocaleString("th-TH", { minimumFractionDigits: 2 })}`;
+                  },
+                },
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function (value) {
+                    return "฿" + value.toLocaleString("th-TH");
+                  },
+                },
+                grid: { color: "rgba(0, 0, 0, 0.05)" },
+              },
+              x: {
+                grid: { display: false },
+              },
+            },
+          },
+        });
+      }
+
+      // 🍩 2. กราฟวงกลม: สัดส่วนรายจ่ายตามหมวดหมู่ (Donut Chart)
+      function renderDonutChartCategory() {
+        const ctx = document.getElementById("mainChart").getContext("2d");
+
+        const categoryTotals = {};
+        state.transactions
+          .filter((t) => t.type === "EXPENSE")
+          .forEach((t) => {
+            const cat = state.categories.find((c) => c.id === t.categoryId);
+            const catName = cat ? cat.name : "อื่นๆ";
+            categoryTotals[catName] = (categoryTotals[catName] || 0) + t.amount;
+          });
+
+        const labels = Object.keys(categoryTotals);
+        const data = Object.values(categoryTotals);
+
+        if (chartInstance) chartInstance.destroy();
+
+        if (labels.length === 0) return;
+
+        chartInstance = new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                data: data,
+                backgroundColor: [
+                  "#EF4444",
+                  "#F59E0B",
+                  "#10B981",
+                  "#3B82F6",
+                  "#6366F1",
+                  "#EC4899",
+                  "#8B5CF6",
+                  "#14B8A6",
+                ],
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom" },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return ` ฿${context.raw.toLocaleString("th-TH", { minimumFractionDigits: 2 })}`;
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      // Form Submission Handler
+      async function handleFormSubmit(e) {
+        e.preventDefault();
+
+        const fileInput = document.getElementById("form-file");
+        let fileBase64 = null;
+        let fileName = null;
+
+        if (fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+          fileName = file.name;
+          fileBase64 = await convertBase64(file);
+        }
+
+        const payload = {
+          type: document.querySelector('input[name="type"]:checked').value,
+          date: document.getElementById("form-date").value,
+          amount: document.getElementById("form-amount").value,
+          categoryId: document.getElementById("form-category").value,
+          note: document.getElementById("form-note").value,
+          fileBase64: fileBase64,
+          fileName: fileName,
+        };
+
+        showLoading(true, "กำลังบันทึกข้อมูล...");
+
+        try {
+          const response = await fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify({
+              action: "createTransaction",
+              payload: payload,
+            }),
+          });
+
+          const result = await response.json();
+          if (result.status === "success") {
+            document.getElementById("txn-form").reset();
+            document.getElementById("form-date").valueAsDate = new Date();
+            filterCategories();
+            await fetchData();
+          } else {
+            alert("เกิดข้อผิดพลาด: " + result.message);
+          }
+        } catch (err) {
+          alert("บันทึกไม่สำเร็จ: " + err.message);
+        } finally {
+          showLoading(false);
+        }
+      }
+
+      // Delete Transaction Handler
+      async function deleteTransaction(id) {
+        if (!confirm("คุณต้องการลบรายการนี้ใช่หรือไม่?")) return;
+
+        showLoading(true, "กำลังลบรายการ...");
+
+        try {
+          const response = await fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify({
+              action: "deleteTransaction",
+              payload: { id: id },
+            }),
+          });
+
+          const result = await response.json();
+          if (result.status === "success") {
+            await fetchData();
+          } else {
+            alert("ลบไม่สำเร็จ: " + result.message);
+          }
+        } catch (err) {
+          alert("เกิดข้อผิดพลาด: " + err.message);
+        } finally {
+          showLoading(false);
+        }
+      }
+
+      // Helper Utility Functions
+      function convertBase64(file) {
+        return new Promise((resolve, reject) => {
+          const fileReader = new FileReader();
+          fileReader.readAsDataURL(file);
+          fileReader.onload = () => resolve(fileReader.result);
+          fileReader.onerror = (error) => reject(error);
+        });
+      }
+
+      function showLoading(show, text = "กำลังประมวลผล...") {
+        const overlay = document.getElementById("loading-overlay");
+        document.getElementById("loading-text").innerText = text;
+        if (show) {
+          overlay.classList.remove("hidden");
+        } else {
+          overlay.classList.add("hidden");
+        }
+      }
+    </script>
+  </body>
+</html>
